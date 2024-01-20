@@ -12,4 +12,17 @@ members = [".", "grocy", "lidl"]
 version = "0.1.0"
 edition = "2021"
 
+[workspace.dependencies]
+anyhow = "1.0.79"
+reqwest = { version = "0.11.23", features = ["blocking", "json"] }
+serde = { version = "1.0.195", features = ["derive"] }
+thiserror = "1.0.56"
+
 [dependencies]
+anyhow.workspace = true
+confy = "0.6.0"
+grocy = { path = "grocy" }
+inquire = "0.6.2"
+lidl = { path = "lidl" }
+serde.workspace = true
+thiserror.workspace = true

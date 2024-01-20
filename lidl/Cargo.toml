@@ -4,3 +4,8 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+anyhow.workspace = true
+oauth2 = "4.4.2"
+reqwest.workspace = true
+serde.workspace = true
+thiserror.workspace = true

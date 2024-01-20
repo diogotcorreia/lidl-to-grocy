@@ -1,0 +1,15 @@
+[package]
+name = "lidl-to-grocy"
+description = "Import receipts from Lidl Plus to Grocy, right from your terminal!"
+authors = ["Diogo Correia <me@diogotc.com>"]
+version.workspace = true
+edition.workspace = true
+
+[workspace]
+members = [".", "grocy", "lidl"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]

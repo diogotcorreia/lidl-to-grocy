@@ -609,6 +609,7 @@ name = "lidl"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "oauth2",
  "reqwest",
  "serde",
@@ -620,6 +621,7 @@ name = "lidl-to-grocy"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "confy",
  "grocy",
  "inquire",

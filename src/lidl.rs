@@ -1,25 +1,50 @@
 use anyhow::Result;
 use inquire::{Select, Text};
-use lidl::{get_countries, LidlApi, OAuthFlow};
+use lidl::{
+    get_countries,
+    structs::{Country, ReceiptDetailed},
+    LidlApi, OAuthFlow,
+};
 
-use crate::{error::Error, LidlConfig};
+use crate::{error::Error, LidlConfig, LidlLocale};
 
-pub(super) fn fetch_receipt_from_lidl(config: &mut LidlConfig) -> Result<()> {
+pub(super) fn fetch_receipt_from_lidl(config: &mut LidlConfig) -> Result<ReceiptDetailed<f64>> {
     let lidl_api = match &config.refresh_token {
-        None => init_token_lidl()?,
-        Some(refresh_token) => OAuthFlow::get_token_from_refresh_token(refresh_token.clone())?,
+        None => init_token_lidl(config)?,
+        Some(refresh_token) => {
+            let locale = match &config.locale {
+                Some(locale) => locale,
+                None => {
+                    let country = prompt_lidl_country()?;
+                    let language = country
+                        .get_default_language()
+                        .ok_or(Error::LidlNoDefaultLanguageForCountry)?;
+
+                    config.locale = Some(LidlLocale {
+                        country: country.id,
+                        language: language.id,
+                    });
+                    config.locale.as_ref().unwrap()
+                }
+            };
+            OAuthFlow::get_token_from_refresh_token(
+                locale.country.clone(),
+                locale.language.clone(),
+                refresh_token.clone(),
+            )?
+        }
     };
     // Save refresh token to config, for future runs
     config.refresh_token = Some(lidl_api.get_refresh_token());
 
-    // todo!()
-    Ok(())
+    let receipts = lidl_api.get_available_receipts()?.receipts;
+
+    let receipt = Select::new("Select receipt to import:", receipts).prompt()?;
+    lidl_api.get_specific_receipt(&receipt)
 }
 
-fn init_token_lidl() -> Result<LidlApi> {
-    let countries = get_countries()?;
-
-    let selected_country = Select::new("Select country for Lidl:", countries).prompt()?;
+fn init_token_lidl(config: &mut LidlConfig) -> Result<LidlApi> {
+    let selected_country = prompt_lidl_country()?;
     let selected_language = selected_country
         .get_default_language()
         .ok_or(Error::LidlNoDefaultLanguageForCountry)?;
@@ -39,5 +64,16 @@ fn init_token_lidl() -> Result<LidlApi> {
         .with_placeholder("com.lidlplus.app://callback?...")
         .prompt()?;
 
+    config.locale = Some(LidlLocale {
+        country: selected_country.id,
+        language: selected_language.id,
+    });
+
     oauth_flow.validate(&callback_url)
+}
+
+fn prompt_lidl_country() -> Result<Country> {
+    let countries = get_countries()?;
+
+    Ok(Select::new("Select country for Lidl:", countries).prompt()?)
 }

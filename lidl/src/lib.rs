@@ -4,21 +4,22 @@ use std::collections::HashMap;
 use anyhow::Result;
 use oauth2::basic::BasicClient;
 use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, CsrfToken, ExtraTokenFields, PkceCodeChallenge,
-    PkceCodeVerifier, RedirectUrl, RefreshToken, Scope, StandardTokenResponse, TokenResponse,
-    TokenType, TokenUrl,
+    AuthUrl, AuthorizationCode, ClientId, CsrfToken, PkceCodeChallenge, PkceCodeVerifier,
+    RedirectUrl, RefreshToken, Scope, TokenResponse, TokenType, TokenUrl,
 };
-use reqwest::header::AUTHORIZATION;
+use reqwest::blocking::Client;
+use reqwest::header::{HeaderMap, ACCEPT_LANGUAGE, AUTHORIZATION};
 use reqwest::Url;
-use structs::{Country, Language};
+use structs::{Country, Language, Receipt, ReceiptDetailed, ReceiptsPage};
 
 use crate::error::Error;
 
-mod error;
-mod structs;
+pub mod error;
+pub mod structs;
 
 const APPGATEWAY_ENDPOINT: &str = "https://appgateway.lidlplus.com";
 const ACCOUNTS_ENDPOINT: &str = "https://accounts.lidl.com";
+const TICKETS_ENDPOINT: &str = "https://tickets.lidlplus.com";
 
 const OAUTH_CLIENT_ID: &str = "LidlPlusNativeClient";
 const OAUTH_REDIRECT_URL: &str = "com.lidlplus.app://callback";
@@ -29,33 +30,71 @@ const OAUTH_TOKEN_PATH: &str = "connect/token";
 const OAUTH_AUTHORIZATION_HEADER: &str = "Basic TGlkbFBsdXNOYXRpdmVDbGllbnQ6c2VjcmV0"; // LidlPlusNativeClient:secret in base64
 
 pub struct LidlApi {
-    #[allow(dead_code)]
-    access_token: String,
     refresh_token: String,
+    country_code: String,
+    client: Client,
 }
 
 impl LidlApi {
-    pub fn get_refresh_token(&self) -> String {
-        self.refresh_token.clone()
-    }
-}
-
-impl<EF, TT> TryFrom<StandardTokenResponse<EF, TT>> for LidlApi
-where
-    EF: ExtraTokenFields,
-    TT: TokenType,
-{
-    type Error = crate::error::Error;
-
-    fn try_from(response: StandardTokenResponse<EF, TT>) -> std::result::Result<Self, Self::Error> {
+    fn from_token_response<TT>(
+        country_code: String,
+        language_code: String,
+        token_response: &impl TokenResponse<TT>,
+    ) -> Result<Self>
+    where
+        TT: TokenType,
+    {
+        let access_token = token_response.access_token().secret();
+        let mut headers = HeaderMap::new();
+        headers.append(AUTHORIZATION, format!("Bearer {}", access_token).parse()?);
+        headers.append(ACCEPT_LANGUAGE, language_code.parse()?);
         Ok(Self {
-            access_token: response.access_token().secret().clone(),
-            refresh_token: response
+            refresh_token: token_response
                 .refresh_token()
                 .ok_or(Error::OAuthMissingRefreshToken)?
                 .secret()
                 .clone(),
+            country_code,
+            client: reqwest::blocking::Client::builder()
+                .default_headers(headers)
+                .build()?,
         })
+    }
+
+    pub fn get_refresh_token(&self) -> String {
+        self.refresh_token.clone()
+    }
+
+    pub fn get_country_code(&self) -> String {
+        self.country_code.clone()
+    }
+
+    pub fn get_available_receipts(&self) -> Result<ReceiptsPage> {
+        Ok(self
+            .client
+            .get(format!(
+                "{}/api/v2/{}/tickets",
+                TICKETS_ENDPOINT, self.country_code,
+            ))
+            .query(&[
+                ("pageNumber", "1"),
+                ("onlyFavorite", "false"),
+                ("itemId", ""),
+            ])
+            .send()?
+            .json()?)
+    }
+
+    pub fn get_specific_receipt(&self, receipt: &Receipt) -> Result<ReceiptDetailed<f64>> {
+        Ok(self
+            .client
+            .get(format!(
+                "{}/api/v2/{}/tickets/{}",
+                TICKETS_ENDPOINT, self.country_code, receipt.id
+            ))
+            .send()?
+            .json::<ReceiptDetailed<String>>()?
+            .try_into()?)
     }
 }
 
@@ -72,6 +111,8 @@ pub struct OAuthFlow {
     auth_url: Url,
     csrf_token: CsrfToken,
     pkce_verifier: PkceCodeVerifier,
+    country_code: String,
+    language_code: String,
 }
 
 impl OAuthFlow {
@@ -111,6 +152,8 @@ impl OAuthFlow {
             auth_url,
             csrf_token,
             pkce_verifier,
+            country_code: country.id.clone(),
+            language_code: language.id.clone(),
         })
     }
 
@@ -140,17 +183,21 @@ impl OAuthFlow {
             .set_pkce_verifier(self.pkce_verifier)
             .request(Self::http_client)?;
 
-        Ok(token_response.try_into()?)
+        LidlApi::from_token_response(self.country_code, self.language_code, &token_response)
     }
 
-    pub fn get_token_from_refresh_token(refresh_token: String) -> Result<LidlApi> {
+    pub fn get_token_from_refresh_token(
+        country_code: String,
+        language_code: String,
+        refresh_token: String,
+    ) -> Result<LidlApi> {
         let client = Self::init_client()?;
 
         let token_response = client
             .exchange_refresh_token(&RefreshToken::new(refresh_token))
             .request(Self::http_client)?;
 
-        Ok(token_response.try_into()?)
+        LidlApi::from_token_response(country_code, language_code, &token_response)
     }
 
     fn http_client(

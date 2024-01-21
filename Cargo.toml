@@ -14,12 +14,14 @@ edition = "2021"
 
 [workspace.dependencies]
 anyhow = "1.0.79"
+chrono = { version = "0.4.31", default-features = false, features = ["alloc", "std"] }
 reqwest = { version = "0.11.23", features = ["blocking", "json"] }
 serde = { version = "1.0.195", features = ["derive"] }
 thiserror = "1.0.56"
 
 [dependencies]
 anyhow.workspace = true
+chrono.workspace = true
 confy = "0.6.0"
 grocy = { path = "grocy" }
 inquire = "0.6.2"

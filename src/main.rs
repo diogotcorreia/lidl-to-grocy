@@ -17,6 +17,13 @@ struct Config {
 #[derive(Debug, Default, Serialize, Deserialize)]
 struct LidlConfig {
     refresh_token: Option<String>,
+    locale: Option<LidlLocale>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+struct LidlLocale {
+    country: String,
+    language: String,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -26,9 +33,9 @@ struct GrocyConfig {
 
 fn main() -> Result<()> {
     let mut cfg: Config = confy::load(CONFIG_NAME, Some(CONFIG_NAME))?;
-    dbg!(&cfg);
 
-    fetch_receipt_from_lidl(&mut cfg.lidl)?;
+    let receipt = fetch_receipt_from_lidl(&mut cfg.lidl)?;
+    dbg!(&receipt);
 
     confy::store(CONFIG_NAME, Some(CONFIG_NAME), cfg)?;
 

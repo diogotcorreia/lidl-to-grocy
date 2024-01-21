@@ -54,8 +54,9 @@ fn get_store_id(config: &mut GrocyConfig, grocy_api: &GrocyApi, store: &Store) -
     match config.stores.get(&store.id) {
         Some(id) => Ok(*id),
         None => {
-            let location =
-                Select::new("Select store for this receipt:", available_locations).prompt()?;
+            let location = Select::new("Select store for this receipt:", available_locations)
+                .with_help_message(&format!("Store name from receipt: {}", store.name))
+                .prompt()?;
             config.stores.insert(store.id.clone(), location.id);
             Ok(location.id)
         }

@@ -1,9 +1,13 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
+use grocy::purchase_lidl_products;
 use serde::{Deserialize, Serialize};
 
 use crate::lidl::fetch_receipt_from_lidl;
 
 mod error;
+mod grocy;
 mod lidl;
 
 const CONFIG_NAME: &str = "lidl-to-grocy";
@@ -28,7 +32,9 @@ struct LidlLocale {
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 struct GrocyConfig {
+    base_url: Option<String>,
     api_key: Option<String>,
+    stores: HashMap<String, u32>,
 }
 
 fn main() -> Result<()> {
@@ -36,6 +42,8 @@ fn main() -> Result<()> {
 
     let receipt = fetch_receipt_from_lidl(&mut cfg.lidl)?;
     dbg!(&receipt);
+
+    purchase_lidl_products(&mut cfg.grocy, receipt)?;
 
     confy::store(CONFIG_NAME, Some(CONFIG_NAME), cfg)?;
 

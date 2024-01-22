@@ -41,8 +41,6 @@ fn main() -> Result<()> {
     let mut cfg: Config = confy::load(CONFIG_NAME, Some(CONFIG_NAME))?;
 
     let receipt = fetch_receipt_from_lidl(&mut cfg.lidl)?;
-    dbg!(&receipt);
-
     purchase_lidl_products(&mut cfg.grocy, receipt)?;
 
     confy::store(CONFIG_NAME, Some(CONFIG_NAME), cfg)?;

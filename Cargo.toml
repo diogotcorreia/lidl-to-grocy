@@ -22,6 +22,7 @@ thiserror = "1.0.56"
 [dependencies]
 anyhow.workspace = true
 chrono.workspace = true
+colored = "2.1.0"
 confy = "0.6.0"
 grocy = { path = "grocy" }
 inquire = { version = "0.6.2", features = ["date"] }

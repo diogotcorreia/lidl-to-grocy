@@ -1,3 +1,4 @@
+use colored::Colorize;
 use std::fmt::Display;
 
 use anyhow::Result;
@@ -45,9 +46,13 @@ pub(super) fn purchase_lidl_products(
 
     if !skipped_products.is_empty() {
         println!();
-        println!("The following products were skipped:");
+        println!("{}", "The following products were skipped:".on_red());
         for product in skipped_products {
-            println!("- {}x {}", product.quantity, product.name);
+            println!(
+                "- {} {}",
+                format!("{}x", product.quantity).yellow(),
+                product.name.green()
+            );
         }
     }
 
@@ -104,10 +109,21 @@ fn purchase_lidl_product(
 ) -> Result<()> {
     println!();
     println!();
-    println!("Handling product {}x {}", product.quantity, product.name);
+    println!(
+        "Handling product {} {}",
+        format!("{}x", product.quantity).yellow(),
+        product.name.green()
+    );
     let product_details = grocy_state
         .api
         .get_product_by_barcode(&product.code_input)
+        .map(|details| {
+            println!(
+                "Found product on Grocy: {}",
+                details.product.name.bright_cyan()
+            );
+            details
+        })
         .or_else(|_| handle_product_without_known_barcode(&grocy_state.api, product))?;
 
     let discount: f64 = product

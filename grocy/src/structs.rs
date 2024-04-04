@@ -54,6 +54,17 @@ pub struct QuantityUnit {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserField {
+    pub id: u32,
+    pub entity: String,
+    pub name: String,
+    pub caption: String,
+    pub r#type: String,
+    pub input_required: u32, // effectively a bool
+    pub config: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddProductBarcodePayload<'a> {
     pub product_id: u32,
     pub barcode: &'a str,

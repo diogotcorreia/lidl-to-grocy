@@ -1,10 +1,12 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use chrono::NaiveDate;
 use reqwest::{blocking::Client, header::HeaderMap};
 use structs::{
     AddProductBarcodePayload, Location, ObjectCreated, Product, ProductDetails,
     PurchaseProductPayload, QuantityUnit, ShoppingLocation, Transaction,
-    UpdateBarcodeLastPricePayload,
+    UpdateBarcodeLastPricePayload, UserField,
 };
 
 pub mod structs;
@@ -68,6 +70,19 @@ impl GrocyApi {
             .json()?)
     }
 
+    pub fn get_barcode_userfields(&self) -> Result<Vec<UserField>> {
+        // can be generalized for more than barcodes in the future if necessary;
+        // not using an arg for now to provide stronger typing guarantees than
+        // if the function accepted an arbitrary entity_name string that might fail
+        Ok(self
+            .client
+            .get(format!("{}/api/objects/userfields", self.base_url))
+            .query(&[("query[]", "entity=product_barcodes")])
+            .send()?
+            .json()?)
+    }
+
+    #[allow(clippy::too_many_arguments)]
     pub fn create_product_barcode(
         &self,
         product_id: u32,
@@ -76,8 +91,9 @@ impl GrocyApi {
         quantity_unit_id: Option<u32>,
         shopping_location_id: u32,
         note: Option<&str>,
+        userfields: HashMap<String, String>,
     ) -> Result<ObjectCreated> {
-        Ok(self
+        let barcode: ObjectCreated = self
             .client
             .post(format!("{}/api/objects/product_barcodes", self.base_url))
             .json(&AddProductBarcodePayload {
@@ -89,7 +105,19 @@ impl GrocyApi {
                 note,
             })
             .send()?
-            .json()?)
+            .json()?;
+
+        if !userfields.is_empty() {
+            self.client
+                .put(format!(
+                    "{}/api/userfields/product_barcodes/{}",
+                    self.base_url, barcode.created_object_id
+                ))
+                .json(&userfields)
+                .send()?;
+        }
+
+        Ok(barcode)
     }
 
     pub fn update_barcode_last_price(&self, barcode_object_id: u32, last_price: f64) -> Result<()> {

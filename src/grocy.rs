@@ -1,5 +1,5 @@
 use colored::Colorize;
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 use anyhow::Result;
 use chrono::{Duration, NaiveDate};
@@ -7,10 +7,10 @@ use grocy::{
     structs::{Location, ProductDetails},
     GrocyApi,
 };
-use inquire::{CustomType, DateSelect, Select, Text};
+use inquire::{Confirm, CustomType, DateSelect, MultiSelect, Select, Text};
 use lidl::structs::{ReceiptDetailed, ReceiptItem, Store};
 
-use crate::{error::Error, GrocyConfig};
+use crate::{dynprompt, error::Error, GrocyConfig};
 
 struct GrocyState {
     api: GrocyApi,
@@ -273,6 +273,8 @@ fn handle_product_without_known_barcode(
                 .with_initial_value(&product.name)
                 .prompt_skippable()?;
 
+            let userfields = prompt_barcode_userfields(grocy_api)?;
+
             grocy_api.create_product_barcode(
                 selected_product.id,
                 &product.code_input,
@@ -280,6 +282,7 @@ fn handle_product_without_known_barcode(
                 Some(selected_product.qu_id_purchase),
                 store_id,
                 note.as_deref(),
+                userfields,
             )?;
 
             grocy_api.get_product_by_barcode(&product.code_input)
@@ -318,4 +321,41 @@ fn prompt_location(grocy_state: &GrocyState, default_location: u32) -> Result<Lo
         .prompt()?;
 
     Ok(location)
+}
+
+fn prompt_barcode_userfields(grocy_api: &GrocyApi) -> Result<HashMap<String, String>> {
+    let userfields = grocy_api.get_barcode_userfields()?;
+    let mut values = HashMap::new();
+
+    for field in userfields {
+        let optional = field.input_required == 0;
+        let opt_tag = if optional { "optional" } else { "required" };
+        let msg = format!("{} for this barcode ({}):", field.caption, opt_tag);
+        let options = field
+            .config
+            .as_deref()
+            .map(|config| config.lines().map(|l| l.to_owned()).collect());
+
+        let value: Option<String> = match field.r#type.as_str() {
+            "checkbox" => dynprompt::prompt(
+                Confirm::new(&msg).with_help_message("Type y[es] or n[o]"),
+                optional,
+            )?,
+            "text-single-line" => dynprompt::prompt(Text::new(&msg), optional)?,
+            "date" => dynprompt::prompt(DateSelect::new(&msg), optional)?,
+            "preset-list" if options.is_some() => {
+                dynprompt::prompt(Select::new(&msg, options.unwrap()), optional)?
+            }
+            "preset-checklist" if options.is_some() => {
+                dynprompt::prompt(MultiSelect::new(&msg, options.unwrap()), optional)?
+            }
+            _ => None, // unsupported type
+        };
+
+        if let Some(value) = value {
+            values.insert(field.name, value);
+        }
+    }
+
+    Ok(values)
 }

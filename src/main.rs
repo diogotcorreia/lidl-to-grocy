@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::lidl::fetch_receipt_from_lidl;
 
+mod dynprompt;
 mod error;
 mod grocy;
 mod lidl;

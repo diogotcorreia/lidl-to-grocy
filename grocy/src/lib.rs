@@ -73,6 +73,7 @@ impl GrocyApi {
         barcode: &str,
         quantity: Option<f64>,
         quantity_unit_id: Option<u32>,
+        shopping_location_id: u32,
     ) -> Result<ObjectCreated> {
         Ok(self
             .client
@@ -82,6 +83,7 @@ impl GrocyApi {
                 barcode,
                 amount: quantity,
                 qu_id: quantity_unit_id,
+                shopping_location_id,
             })
             .send()?
             .json()?)

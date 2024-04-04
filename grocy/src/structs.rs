@@ -58,6 +58,7 @@ pub struct AddProductBarcodePayload<'a> {
     pub barcode: &'a str,
     pub amount: Option<f64>,
     pub qu_id: Option<u32>,
+    pub shopping_location_id: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

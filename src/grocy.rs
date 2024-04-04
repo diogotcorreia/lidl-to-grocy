@@ -124,7 +124,7 @@ fn purchase_lidl_product(
             );
             details
         })
-        .or_else(|_| handle_product_without_known_barcode(&grocy_state.api, product))?;
+        .or_else(|_| handle_product_without_known_barcode(&grocy_state.api, product, store_id))?;
 
     let discount: f64 = product
         .discounts
@@ -217,6 +217,7 @@ impl Display for UnknownProductAction {
 fn handle_product_without_known_barcode(
     grocy_api: &GrocyApi,
     product: &ReceiptItem<f64>,
+    store_id: u32,
 ) -> Result<ProductDetails> {
     let options = vec![
         UnknownProductAction::AssociateProduct,
@@ -258,6 +259,7 @@ fn handle_product_without_known_barcode(
                 &product.code_input,
                 quantity,
                 Some(selected_product.qu_id_purchase),
+                store_id,
             )?;
 
             grocy_api.get_product_by_barcode(&product.code_input)

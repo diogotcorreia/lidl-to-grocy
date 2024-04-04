@@ -254,12 +254,17 @@ fn handle_product_without_known_barcode(
                 );
             }
 
+            let note = Text::new("Enter note for this barcode:")
+                .with_initial_value(&product.name)
+                .prompt_skippable()?;
+
             grocy_api.create_product_barcode(
                 selected_product.id,
                 &product.code_input,
                 quantity,
                 Some(selected_product.qu_id_purchase),
                 store_id,
+                note.as_deref(),
             )?;
 
             grocy_api.get_product_by_barcode(&product.code_input)

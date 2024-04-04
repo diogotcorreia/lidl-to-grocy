@@ -135,6 +135,12 @@ fn purchase_lidl_product(
         .filter(|days| *days >= 0)
         .map(|days| chrono::Local::now().date_naive() + Duration::days(days.into()));
 
+    let product_barcode = product_details
+        .product_barcodes
+        .iter()
+        .find(|barcode| barcode.barcode == product.code_input);
+    let note = product_barcode.and_then(|barcode| barcode.note.as_deref());
+
     if product.is_weight {
         let quantity = CustomType::<f64>::new(&format!(
             "Enter quantity for this product ({} kg)",
@@ -159,12 +165,10 @@ fn purchase_lidl_product(
             Some(price),
             Some(location.id),
             Some(store_id),
+            note,
         )?;
     } else {
-        let product_barcode_amount = product_details
-            .product_barcodes
-            .iter()
-            .find(|barcode| barcode.barcode == product.code_input)
+        let product_barcode_amount = product_barcode
             .and_then(|barcode| barcode.amount)
             .ok_or(Error::BarcodeAmountNotFound)?;
 
@@ -193,6 +197,7 @@ fn purchase_lidl_product(
                 Some(price),
                 Some(location.id),
                 Some(store_id),
+                note,
             )?;
         }
     }

@@ -110,6 +110,7 @@ impl GrocyApi {
         price: Option<f64>,
         location: Option<u32>,
         shopping_location: Option<u32>,
+        note: Option<&str>,
     ) -> Result<Vec<Transaction>> {
         Ok(self
             .client
@@ -128,6 +129,7 @@ impl GrocyApi {
                 location_id: location,
                 shopping_location_id: shopping_location,
                 stock_label_type: 0,
+                note,
             })
             .send()?
             .json()?)

@@ -43,6 +43,7 @@ pub struct ProductBarcode {
     pub barcode: String,
     pub qu_id: Option<u32>,
     pub amount: Option<f64>,
+    pub note: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,6 +95,7 @@ pub struct PurchaseProductPayload<'a> {
     pub location_id: Option<u32>,
     pub shopping_location_id: Option<u32>,
     pub stock_label_type: u8,
+    pub note: Option<&'a str>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

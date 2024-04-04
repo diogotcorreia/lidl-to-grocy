@@ -141,7 +141,7 @@ fn purchase_lidl_product(
         .find(|barcode| barcode.barcode == product.code_input);
     let note = product_barcode.and_then(|barcode| barcode.note.as_deref());
 
-    if product.is_weight {
+    let price = if product.is_weight {
         let quantity = CustomType::<f64>::new(&format!(
             "Enter quantity for this product ({} kg)",
             product.quantity
@@ -167,6 +167,8 @@ fn purchase_lidl_product(
             Some(store_id),
             note,
         )?;
+
+        price
     } else {
         let product_barcode_amount = product_barcode
             .and_then(|barcode| barcode.amount)
@@ -200,6 +202,14 @@ fn purchase_lidl_product(
                 note,
             )?;
         }
+
+        price
+    };
+
+    if let Some(barcode) = product_barcode {
+        grocy_state
+            .api
+            .update_barcode_last_price(barcode.id, price)?;
     }
 
     Ok(())

@@ -69,6 +69,11 @@ pub struct ObjectCreated {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateBarcodeLastPricePayload {
+    pub last_price: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Location {
     pub id: u32,
     pub name: String,

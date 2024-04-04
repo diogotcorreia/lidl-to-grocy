@@ -4,6 +4,7 @@ use reqwest::{blocking::Client, header::HeaderMap};
 use structs::{
     AddProductBarcodePayload, Location, ObjectCreated, Product, ProductDetails,
     PurchaseProductPayload, QuantityUnit, ShoppingLocation, Transaction,
+    UpdateBarcodeLastPricePayload,
 };
 
 pub mod structs;
@@ -89,6 +90,20 @@ impl GrocyApi {
             })
             .send()?
             .json()?)
+    }
+
+    pub fn update_barcode_last_price(&self, barcode_object_id: u32, last_price: f64) -> Result<()> {
+        // Grocy uses PATCH semantics for PUT so we only need to pass last_price
+        // see: https://github.com/grocy/grocy/blob/6602c76005bfdb436681d976e130407650719a4a/public/viewjs/purchase.js#L83
+        self.client
+            .put(format!(
+                "{}/api/objects/product_barcodes/{}",
+                self.base_url, barcode_object_id
+            ))
+            .json(&UpdateBarcodeLastPricePayload { last_price })
+            .send()?;
+
+        Ok(())
     }
 
     pub fn get_locations(&self) -> Result<Vec<Location>> {

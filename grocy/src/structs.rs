@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShoppingLocation {
@@ -25,9 +25,11 @@ pub struct ProductDetails {
 pub struct Product {
     pub id: u32,
     pub name: String,
-    pub location_id: u32,
+    #[serde(deserialize_with = "deserialize_fallible")]
+    pub location_id: Option<u32>,
     pub default_best_before_days: i32,
-    pub qu_id_purchase: u32,
+    #[serde(deserialize_with = "deserialize_fallible")]
+    pub qu_id_purchase: Option<u32>,
 }
 
 impl Display for Product {
@@ -117,4 +119,14 @@ pub struct PurchaseProductPayload<'a> {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {
     pub id: u32,
+}
+
+// e.g., for when deserializing -1 into an Option<u32>
+// should return None instead of raising an error
+fn deserialize_fallible<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Ok(Deserialize::deserialize(deserializer).ok())
 }

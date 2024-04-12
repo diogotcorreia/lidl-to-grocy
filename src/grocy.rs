@@ -259,7 +259,13 @@ fn handle_product_without_known_barcode(
 
             let mut quantity = None;
             if !product.is_weight {
-                let quantity_unit = grocy_api.get_quantity_unit(selected_product.qu_id_purchase)?;
+                let quantity_unit = if let Some(qu_id) = selected_product.qu_id_purchase {
+                    grocy_api.get_quantity_unit(qu_id)?
+                } else {
+                    println!("The selected product does not define a purchase quantity unit!");
+                    println!("Let's try again:");
+                    return handle_product_without_known_barcode(grocy_api, product, store_id);
+                };
 
                 quantity = Some(
                     CustomType::<f64>::new("Enter quantity for each barcode:")
@@ -279,7 +285,7 @@ fn handle_product_without_known_barcode(
                 selected_product.id,
                 &product.code_input,
                 quantity,
-                Some(selected_product.qu_id_purchase),
+                selected_product.qu_id_purchase,
                 store_id,
                 note.as_deref(),
                 userfields,
@@ -310,11 +316,10 @@ fn prompt_due_date(
         .prompt_skippable()?)
 }
 
-fn prompt_location(grocy_state: &GrocyState, default_location: u32) -> Result<Location> {
+fn prompt_location(grocy_state: &GrocyState, default_location: Option<u32>) -> Result<Location> {
     let locations = grocy_state.locations.clone();
-    let default_location_index = locations
-        .iter()
-        .position(|loc| loc.id == default_location)
+    let default_location_index = default_location
+        .and_then(|default| locations.iter().position(|loc| loc.id == default))
         .unwrap_or(0);
     let location = Select::new("Where will the item be stored?", locations)
         .with_starting_cursor(default_location_index)

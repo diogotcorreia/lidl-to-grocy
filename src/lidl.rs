@@ -1,5 +1,5 @@
 use anyhow::Result;
-use inquire::{Select, Text};
+use inquire::{Confirm, Select, Text};
 use lidl::{
     get_countries,
     structs::{Country, ReceiptDetailed},
@@ -49,16 +49,33 @@ fn init_token_lidl(config: &mut LidlConfig) -> Result<LidlApi> {
         .get_default_language()
         .ok_or(Error::LidlNoDefaultLanguageForCountry)?;
 
+    println!("Please read these simple instructions:");
+    println!("1. You will be a given a link to click on");
+    println!("2. Before logging in, open DevTools and go to the Network tab");
+    println!("3. Log in using your Lidl account credentials for the country you selected");
+    println!("4. After logging in, DevTools will show a blocked request (due to unknown protocol)");
+    println!("5. Open that request, and copy the value of the Location response header");
+    println!();
+
+    loop {
+        let smart = Confirm::new("Do you understand the instructions above?")
+            .with_help_message("Type y[es] if you are ready to follow them, or [n]o otherwise")
+            .prompt()?;
+
+        if smart {
+            break;
+        } else {
+            println!("Okay, re-read them and let's try again");
+            println!();
+        }
+    }
+
     let oauth_flow = OAuthFlow::init(&selected_country, &selected_language)?;
     println!(
         "Open the following URL in your browser to login: {}",
         oauth_flow.get_url()
     );
     println!();
-    println!("Instructions:");
-    println!("1. Before logging in, open devtools and go to the network tab.");
-    println!("2. After logging in, there will be a blocked request (due to unknown protocol).");
-    println!("3. Open that request, and copy the value of the Location response header.");
 
     let callback_url = Text::new("Please enter the callback URL you got:")
         .with_placeholder("com.lidlplus.app://callback?...")

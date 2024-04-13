@@ -65,8 +65,8 @@ fn init_grocy_api(config: &mut GrocyConfig) -> Result<GrocyApi> {
         None => {
             let url = Text::new("Please enter your Grocy instance's url:")
                 .with_placeholder("https://grocy.example.com")
-                .with_help_message("Do not include a forward slash at the end")
                 .prompt()?;
+            let url = url.trim_end_matches('/').to_owned();
             config.base_url = Some(url);
             config.base_url.as_ref().unwrap()
         }

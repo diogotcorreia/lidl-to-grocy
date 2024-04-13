@@ -143,7 +143,7 @@ fn purchase_lidl_product(
 
     let price = if product.is_weight {
         let quantity = CustomType::<f64>::new(&format!(
-            "Enter quantity for this product ({} kg)",
+            "Enter quantity for this product ({} kg):",
             product.quantity
         ))
         .with_help_message(&format!(
@@ -151,6 +151,7 @@ fn purchase_lidl_product(
             product_details.default_quantity_unit_purchase.name_plural
         ))
         .prompt()?;
+        let quantity = quantity * product_details.qu_conversion_factor_purchase_to_stock;
 
         let due_date = prompt_due_date(None, default_date)?;
         let location = prompt_location(grocy_state, product_details.product.location_id)?;
@@ -173,6 +174,15 @@ fn purchase_lidl_product(
         let product_barcode_amount = product_barcode
             .and_then(|barcode| barcode.amount)
             .ok_or(Error::BarcodeAmountNotFound)?;
+
+        let product_barcode_amount = match product_barcode.and_then(|barcode| barcode.qu_id) {
+            Some(id) if id == product_details.quantity_unit_stock.id => product_barcode_amount,
+            Some(id) if id == product_details.default_quantity_unit_purchase.id => {
+                product_barcode_amount * product_details.qu_conversion_factor_purchase_to_stock
+            }
+            Some(id) => Err(Error::BarcodeQuantityUnitUnsupported(id))?,
+            None => Err(Error::BarcodeQuantityUnitNotFound)?,
+        };
 
         let quantity = product.quantity.round() as u32;
 

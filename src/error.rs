@@ -8,4 +8,8 @@ pub enum Error {
     SkippedProduct,
     #[error("Expected barcode associated with its product to have an amount, but it didn't")]
     BarcodeAmountNotFound,
+    #[error("Expected barcode associated with its product to have a quantity unit, but it didn't")]
+    BarcodeQuantityUnitNotFound,
+    #[error("Barcode's quantity unit (#{0}) is not its product's stock nor purchase default")]
+    BarcodeQuantityUnitUnsupported(u32),
 }

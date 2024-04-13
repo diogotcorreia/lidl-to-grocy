@@ -18,7 +18,9 @@ impl Display for ShoppingLocation {
 pub struct ProductDetails {
     pub product: Product,
     pub product_barcodes: Vec<ProductBarcode>,
+    pub quantity_unit_stock: QuantityUnit,
     pub default_quantity_unit_purchase: QuantityUnit,
+    pub qu_conversion_factor_purchase_to_stock: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

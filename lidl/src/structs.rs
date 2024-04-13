@@ -124,10 +124,10 @@ impl TryFrom<ReceiptItem<String>> for ReceiptItem<f64> {
 
     fn try_from(value: ReceiptItem<String>) -> Result<Self, Self::Error> {
         Ok(Self {
-            current_unit_price: value.current_unit_price.replace(",", ".").parse()?,
-            quantity: value.quantity.replace(",", ".").parse()?,
+            current_unit_price: value.current_unit_price.replace(',', ".").parse()?,
+            quantity: value.quantity.replace(',', ".").parse()?,
             is_weight: value.is_weight,
-            original_amount: value.original_amount.replace(",", ".").parse()?,
+            original_amount: value.original_amount.replace(',', ".").parse()?,
             name: value.name,
             code_input: value.code_input,
             discounts: value
@@ -152,7 +152,7 @@ impl TryFrom<Discount<String>> for Discount<f64> {
     fn try_from(value: Discount<String>) -> Result<Self, Self::Error> {
         Ok(Self {
             description: value.description,
-            amount: value.amount.replace(",", ".").parse()?,
+            amount: value.amount.replace(',', ".").parse()?,
         })
     }
 }

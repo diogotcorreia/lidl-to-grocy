@@ -8,7 +8,7 @@ use grocy::{
     GrocyApi,
 };
 use inquire::{Confirm, CustomType, DateSelect, MultiSelect, Select, Text};
-use lidl::structs::{ReceiptDetailed, ReceiptItem, Store};
+use lidl::structs::{Currency, ReceiptDetailed, ReceiptItem, Store};
 
 use crate::{dynprompt, error::Error, GrocyConfig};
 
@@ -34,7 +34,13 @@ pub(super) fn purchase_lidl_products(
         .items_line
         .into_iter()
         .filter(|item| {
-            match purchase_lidl_product(&grocy_state, store_id, item, receipt.date.date()) {
+            match purchase_lidl_product(
+                &grocy_state,
+                store_id,
+                item,
+                receipt.date.date(),
+                &receipt.currency,
+            ) {
                 Ok(_) => false,
                 Err(error) => {
                     println!("{}", format!("ERROR: {}", error).red());
@@ -106,13 +112,36 @@ fn purchase_lidl_product(
     store_id: u32,
     product: &ReceiptItem<f64>,
     purchase_date: NaiveDate,
+    currency: &Currency,
 ) -> Result<()> {
+    let discount: f64 = product
+        .discounts
+        .iter()
+        .map(|discount| discount.amount)
+        .sum();
+
     println!();
     println!();
     println!(
-        "Handling product {} {}",
+        "Handling product {} {} ({})",
         format!("{}x", product.quantity).yellow(),
-        product.name.green()
+        product.name.green(),
+        if discount != 0.0 {
+            format!(
+                "{} = {} - {}",
+                format!(
+                    "{:.2} {}",
+                    product.original_amount - discount,
+                    currency.symbol
+                )
+                .bright_blue(),
+                format!("{:.2} {}", product.original_amount, currency.symbol).bright_magenta(),
+                format!("{:.2} {}", discount, currency.symbol).bright_green(),
+            )
+            .into()
+        } else {
+            format!("{:.2} {}", product.original_amount, currency.symbol).bright_blue()
+        }
     );
     let product_details = grocy_state
         .api
@@ -130,11 +159,6 @@ fn purchase_lidl_product(
         return Err(Error::ProductHasTareWeightHandling)?;
     }
 
-    let discount: f64 = product
-        .discounts
-        .iter()
-        .map(|discount| discount.amount)
-        .sum();
     let default_date = Some(product_details.product.default_best_before_days)
         .filter(|days| *days >= 0)
         .map(|days| chrono::Local::now().date_naive() + Duration::days(days.into()));

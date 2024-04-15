@@ -126,6 +126,10 @@ fn purchase_lidl_product(
         })
         .or_else(|_| handle_product_without_known_barcode(&grocy_state.api, product, store_id))?;
 
+    if product_details.product.enable_tare_weight_handling {
+        return Err(Error::ProductHasTareWeightHandling)?;
+    }
+
     let discount: f64 = product
         .discounts
         .iter()

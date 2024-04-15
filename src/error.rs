@@ -12,4 +12,6 @@ pub enum Error {
     BarcodeQuantityUnitNotFound,
     #[error("Barcode's quantity unit (#{0}) is not its product's stock nor purchase default")]
     BarcodeQuantityUnitUnsupported(u32),
+    #[error("Product has tare weight handling enabled, but that is not supported by this program")]
+    ProductHasTareWeightHandling,
 }

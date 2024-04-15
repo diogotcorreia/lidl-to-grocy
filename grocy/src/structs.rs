@@ -32,6 +32,8 @@ pub struct Product {
     pub default_best_before_days: i32,
     #[serde(deserialize_with = "deserialize_fallible")]
     pub qu_id_purchase: Option<u32>,
+    #[serde(deserialize_with = "deserialize_bool")]
+    pub enable_tare_weight_handling: bool,
 }
 
 impl Display for Product {
@@ -131,4 +133,14 @@ where
     T: Deserialize<'de>,
 {
     Ok(Deserialize::deserialize(deserializer).ok())
+}
+
+// e.g., for when deserializing 0/1 into a bool
+// a number is true if it is not zero
+fn deserialize_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: u8 = Deserialize::deserialize(deserializer)?;
+    Ok(value != 0)
 }

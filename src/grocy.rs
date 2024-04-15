@@ -37,7 +37,7 @@ pub(super) fn purchase_lidl_products(
             match purchase_lidl_product(&grocy_state, store_id, item, receipt.date.date()) {
                 Ok(_) => false,
                 Err(error) => {
-                    println!("{}", error);
+                    println!("{}", format!("ERROR: {}", error).red());
                     true
                 }
             }

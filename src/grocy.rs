@@ -33,6 +33,7 @@ pub(super) fn purchase_lidl_products(
     let skipped_products: Vec<_> = receipt
         .items_line
         .into_iter()
+        .rev() // items scanned first are at the bottom of the bag
         .filter(|item| {
             match purchase_lidl_product(
                 &grocy_state,

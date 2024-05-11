@@ -5,7 +5,7 @@
 }:
 rustPlatform.buildRustPackage {
   pname = "lidl-to-grocy";
-  version = "1.1.1";
+  version = "1.2.0";
 
   nativeBuildInputs = [pkg-config];
 

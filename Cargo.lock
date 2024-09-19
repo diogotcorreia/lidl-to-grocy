@@ -585,6 +585,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f518f335dce6725a761382244631d86cf0ccb2863413590b31338feb467f9c3"
 
 [[package]]
+name = "ir"
+version = "1.2.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -628,6 +636,7 @@ version = "1.2.0"
 dependencies = [
  "anyhow",
  "chrono",
+ "ir",
  "oauth2",
  "reqwest",
  "serde",
@@ -644,6 +653,7 @@ dependencies = [
  "confy",
  "grocy",
  "inquire",
+ "ir",
  "lidl",
  "serde",
  "thiserror",

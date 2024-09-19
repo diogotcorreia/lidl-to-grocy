@@ -1,4 +1,5 @@
 use colored::Colorize;
+use ir::{Currency, ReceiptDetailed, ReceiptItem, Store};
 use std::{collections::HashMap, fmt::Display};
 
 use anyhow::Result;
@@ -8,7 +9,6 @@ use grocy::{
     GrocyApi,
 };
 use inquire::{Confirm, CustomType, DateSelect, MultiSelect, Select, Text};
-use lidl::structs::{Currency, ReceiptDetailed, ReceiptItem, Store};
 
 use crate::{dynprompt, error::Error, GrocyConfig};
 
@@ -19,7 +19,7 @@ struct GrocyState {
 
 pub(super) fn purchase_lidl_products(
     config: &mut GrocyConfig,
-    receipt: ReceiptDetailed<f64>,
+    receipt: ReceiptDetailed,
 ) -> Result<()> {
     let grocy_api = init_grocy_api(config)?;
     let store_id = get_store_id(config, &grocy_api, &receipt.store)?;
@@ -31,7 +31,7 @@ pub(super) fn purchase_lidl_products(
     };
 
     let skipped_products: Vec<_> = receipt
-        .items_line
+        .items
         .into_iter()
         .rev() // items scanned first are at the bottom of the bag
         .filter(|item| {
@@ -111,7 +111,7 @@ fn get_store_id(config: &mut GrocyConfig, grocy_api: &GrocyApi, store: &Store) -
 fn purchase_lidl_product(
     grocy_state: &GrocyState,
     store_id: u32,
-    product: &ReceiptItem<f64>,
+    product: &ReceiptItem,
     purchase_date: NaiveDate,
     currency: &Currency,
 ) -> Result<()> {
@@ -120,6 +120,9 @@ fn purchase_lidl_product(
         .iter()
         .map(|discount| discount.amount)
         .sum();
+
+    // without discounts
+    let total_amount = product.quantity * product.unit_price;
 
     println!();
     println!();
@@ -130,23 +133,18 @@ fn purchase_lidl_product(
         if discount != 0.0 {
             format!(
                 "{} = {} - {}",
-                format!(
-                    "{:.2} {}",
-                    product.original_amount - discount,
-                    currency.symbol
-                )
-                .bright_blue(),
-                format!("{:.2} {}", product.original_amount, currency.symbol).bright_magenta(),
+                format!("{:.2} {}", total_amount - discount, currency.symbol).bright_blue(),
+                format!("{:.2} {}", total_amount, currency.symbol).bright_magenta(),
                 format!("{:.2} {}", discount, currency.symbol).bright_green(),
             )
             .into()
         } else {
-            format!("{:.2} {}", product.original_amount, currency.symbol).bright_blue()
+            format!("{:.2} {}", total_amount, currency.symbol).bright_blue()
         }
     );
     let product_details = grocy_state
         .api
-        .get_product_by_barcode(&product.code_input)
+        .get_product_by_barcode(&product.barcode)
         .map(|details| {
             println!(
                 "Found product on Grocy: {}",
@@ -167,7 +165,7 @@ fn purchase_lidl_product(
     let product_barcode = product_details
         .product_barcodes
         .iter()
-        .find(|barcode| barcode.barcode == product.code_input);
+        .find(|barcode| barcode.barcode == product.barcode);
     let note = product_barcode.and_then(|barcode| barcode.note.as_deref());
 
     let price = if product.is_weight {
@@ -185,7 +183,7 @@ fn purchase_lidl_product(
         let due_date = prompt_due_date(None, default_date)?;
         let location = prompt_location(grocy_state, product_details.product.location_id)?;
 
-        let price = (product.original_amount - discount) / quantity;
+        let price = (total_amount - discount) / quantity;
 
         grocy_state.api.purchase_product(
             product_details.product.id,
@@ -227,7 +225,7 @@ fn purchase_lidl_product(
 
         let discount_per_item = discount / quantity as f64;
 
-        let price = (product.current_unit_price - discount_per_item) / product_barcode_amount;
+        let price = (product.unit_price - discount_per_item) / product_barcode_amount;
 
         for due_date in due_dates {
             grocy_state.api.purchase_product(
@@ -270,7 +268,7 @@ impl Display for UnknownProductAction {
 
 fn handle_product_without_known_barcode(
     grocy_api: &GrocyApi,
-    product: &ReceiptItem<f64>,
+    product: &ReceiptItem,
     store_id: u32,
 ) -> Result<ProductDetails> {
     let options = vec![
@@ -281,7 +279,7 @@ fn handle_product_without_known_barcode(
     let action = Select::new(
         &format!(
             "This barcode ({}) is not associated with a product. What do you want to do?",
-            product.code_input
+            product.barcode
         ),
         options,
     )
@@ -322,7 +320,7 @@ fn handle_product_without_known_barcode(
 
             grocy_api.create_product_barcode(
                 selected_product.id,
-                &product.code_input,
+                &product.barcode,
                 quantity,
                 selected_product.qu_id_purchase,
                 store_id,
@@ -330,7 +328,7 @@ fn handle_product_without_known_barcode(
                 userfields,
             )?;
 
-            grocy_api.get_product_by_barcode(&product.code_input)
+            grocy_api.get_product_by_barcode(&product.barcode)
         }
         UnknownProductAction::Skip => Err(Error::SkippedProduct.into()),
     }

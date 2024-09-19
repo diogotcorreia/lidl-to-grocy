@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 
 use anyhow::Result;
+use ir::{ReceiptSummary, StoreApi};
 use oauth2::basic::BasicClient;
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, CsrfToken, PkceCodeChallenge, PkceCodeVerifier,
@@ -10,7 +11,7 @@ use oauth2::{
 use reqwest::blocking::Client;
 use reqwest::header::{HeaderMap, ACCEPT_LANGUAGE, AUTHORIZATION};
 use reqwest::Url;
-use structs::{Country, Language, Receipt, ReceiptDetailed, ReceiptsPage};
+use structs::{Country, Language, ReceiptDetailed, ReceiptsPage};
 
 use crate::error::Error;
 
@@ -68,9 +69,11 @@ impl LidlApi {
     pub fn get_country_code(&self) -> String {
         self.country_code.clone()
     }
+}
 
-    pub fn get_available_receipts(&self) -> Result<ReceiptsPage> {
-        Ok(self
+impl StoreApi for LidlApi {
+    fn get_available_receipts(&self) -> Result<Vec<ReceiptSummary>> {
+        let receipts_page: ReceiptsPage = self
             .client
             .get(format!(
                 "{}/api/v2/{}/tickets",
@@ -82,11 +85,13 @@ impl LidlApi {
                 ("itemId", ""),
             ])
             .send()?
-            .json()?)
+            .json()?;
+
+        Ok(receipts_page.receipts.into_iter().map(Into::into).collect())
     }
 
-    pub fn get_specific_receipt(&self, receipt: &Receipt) -> Result<ReceiptDetailed<f64>> {
-        Ok(self
+    fn get_specific_receipt(&self, receipt: &ReceiptSummary) -> Result<ir::ReceiptDetailed> {
+        let receipt: ReceiptDetailed<f64> = self
             .client
             .get(format!(
                 "{}/api/v2/{}/tickets/{}",
@@ -94,7 +99,9 @@ impl LidlApi {
             ))
             .send()?
             .json::<ReceiptDetailed<String>>()?
-            .try_into()?)
+            .try_into()?;
+
+        Ok(receipt.into())
     }
 }
 

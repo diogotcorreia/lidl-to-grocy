@@ -38,14 +38,14 @@ pub struct Language {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ReceiptsPage {
+pub(crate) struct ReceiptsPage {
     #[serde(rename = "tickets")]
     pub receipts: Vec<Receipt>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Receipt {
+pub(crate) struct Receipt {
     pub id: String,
     pub date: DateTime<Utc>,
     pub currency: Currency,
@@ -54,24 +54,32 @@ pub struct Receipt {
     pub articles_count: u32,
 }
 
-impl Display for Receipt {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} - {} product(s) - {} {}",
-            self.date.format("%a %b %e %Y %T"),
-            self.articles_count,
-            self.total_amount,
-            self.currency.symbol
-        )
+impl From<Receipt> for ir::ReceiptSummary {
+    fn from(value: Receipt) -> Self {
+        Self {
+            id: value.id,
+            date: value.date.naive_utc(), // Lidl sends local date with utc offset (which is wrong)
+            currency: value.currency.into(),
+            total_amount: value.total_amount,
+            articles_count: Some(value.articles_count),
+        }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Currency {
+pub(crate) struct Currency {
     pub code: String,
     pub symbol: String,
+}
+
+impl From<Currency> for ir::Currency {
+    fn from(value: Currency) -> Self {
+        Self {
+            id: value.code,
+            symbol: value.symbol,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -79,7 +87,7 @@ pub struct Currency {
 // The Lidl API returns floats and integers as strings,
 // so we generalize this struct to accept both and convert
 // everything to floats after deserializing
-pub struct ReceiptDetailed<T> {
+pub(crate) struct ReceiptDetailed<T> {
     pub id: String,
     pub items_line: Vec<ReceiptItem<T>>,
     pub date: NaiveDateTime,
@@ -107,9 +115,21 @@ impl TryFrom<ReceiptDetailed<String>> for ReceiptDetailed<f64> {
     }
 }
 
+impl From<ReceiptDetailed<f64>> for ir::ReceiptDetailed {
+    fn from(value: ReceiptDetailed<f64>) -> Self {
+        Self {
+            id: value.id,
+            items: value.items_line.into_iter().map(Into::into).collect(),
+            date: value.date,
+            currency: value.currency.into(),
+            store: value.store.into(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ReceiptItem<T> {
+pub(crate) struct ReceiptItem<T> {
     pub current_unit_price: T,
     pub quantity: T,
     pub is_weight: bool,
@@ -139,9 +159,22 @@ impl TryFrom<ReceiptItem<String>> for ReceiptItem<f64> {
     }
 }
 
+impl From<ReceiptItem<f64>> for ir::ReceiptItem {
+    fn from(value: ReceiptItem<f64>) -> Self {
+        Self {
+            unit_price: value.current_unit_price,
+            quantity: value.quantity,
+            is_weight: value.is_weight,
+            name: value.name,
+            barcode: value.code_input,
+            discounts: value.discounts.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Discount<T> {
+pub(crate) struct Discount<T> {
     pub description: String,
     pub amount: T,
 }
@@ -157,9 +190,26 @@ impl TryFrom<Discount<String>> for Discount<f64> {
     }
 }
 
+impl From<Discount<f64>> for ir::Discount {
+    fn from(value: Discount<f64>) -> Self {
+        Self {
+            amount: value.amount,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Store {
+pub(crate) struct Store {
     pub id: String,
     pub name: String,
+}
+
+impl From<Store> for ir::Store {
+    fn from(value: Store) -> Self {
+        Self {
+            id: value.id,
+            name: value.name,
+        }
+    }
 }

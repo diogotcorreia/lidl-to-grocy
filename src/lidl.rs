@@ -1,14 +1,11 @@
 use anyhow::Result;
 use inquire::{Confirm, Select, Text};
-use lidl::{
-    get_countries,
-    structs::{Country, ReceiptDetailed},
-    LidlApi, OAuthFlow,
-};
+use ir::{ReceiptDetailed, StoreApi};
+use lidl::{get_countries, structs::Country, LidlApi, OAuthFlow};
 
 use crate::{error::Error, LidlConfig, LidlLocale};
 
-pub(super) fn fetch_receipt_from_lidl(config: &mut LidlConfig) -> Result<ReceiptDetailed<f64>> {
+pub(super) fn fetch_receipt_from_lidl(config: &mut LidlConfig) -> Result<ReceiptDetailed> {
     let lidl_api = match &config.refresh_token {
         None => init_token_lidl(config)?,
         Some(refresh_token) => {
@@ -37,7 +34,7 @@ pub(super) fn fetch_receipt_from_lidl(config: &mut LidlConfig) -> Result<Receipt
     // Save refresh token to config, for future runs
     config.refresh_token = Some(lidl_api.get_refresh_token());
 
-    let receipts = lidl_api.get_available_receipts()?.receipts;
+    let receipts = lidl_api.get_available_receipts()?;
 
     let receipt = Select::new("Select receipt to import:", receipts).prompt()?;
     lidl_api.get_specific_receipt(&receipt)

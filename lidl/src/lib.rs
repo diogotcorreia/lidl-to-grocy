@@ -11,11 +11,12 @@ use oauth2::{
 use reqwest::blocking::Client;
 use reqwest::header::{HeaderMap, ACCEPT_LANGUAGE, AUTHORIZATION};
 use reqwest::Url;
-use structs::{Country, Language, ReceiptDetailed, ReceiptsPage};
+use structs::{Country, Language, ReceiptDetailed, ReceiptsPage, UnifiedReceiptDetailed};
 
 use crate::error::Error;
 
 pub mod error;
+mod html_receipt;
 pub mod structs;
 
 const APPGATEWAY_ENDPOINT: &str = "https://appgateway.lidlplus.com";
@@ -91,17 +92,37 @@ impl StoreApi for LidlApi {
     }
 
     fn get_specific_receipt(&self, receipt: &ReceiptSummary) -> Result<ir::ReceiptDetailed> {
-        let receipt: ReceiptDetailed<f64> = self
+        let receipt_v2_response = self
             .client
             .get(format!(
                 "{}/api/v2/{}/tickets/{}",
                 TICKETS_ENDPOINT, self.country_code, receipt.id
             ))
-            .send()?
-            .json::<ReceiptDetailed<String>>()?
-            .try_into()?;
+            .send()?;
 
-        Ok(receipt.into())
+        if receipt_v2_response.status().is_success() {
+            let receipt: ReceiptDetailed<f64> = receipt_v2_response
+                .json::<ReceiptDetailed<String>>()?
+                .try_into()?;
+
+            Ok(receipt.into())
+        } else {
+            let receipt: UnifiedReceiptDetailed = self
+                .client
+                .get(format!(
+                    "{}/api/v3/{}/tickets/{}",
+                    TICKETS_ENDPOINT, self.country_code, receipt.id
+                ))
+                .send()?
+                .json()?;
+
+            Ok(html_receipt::parse_html_receipt(
+                receipt.id,
+                receipt.date,
+                receipt.store.into(),
+                &receipt.html_printed_receipt,
+            )?)
+        }
     }
 }
 

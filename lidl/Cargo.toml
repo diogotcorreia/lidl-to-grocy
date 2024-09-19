@@ -9,5 +9,6 @@ chrono.workspace = true
 ir.workspace = true
 oauth2 = "4.4.2"
 reqwest.workspace = true
+scraper = "0.20.0"
 serde.workspace = true
 thiserror.workspace = true

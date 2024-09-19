@@ -213,3 +213,13 @@ impl From<Store> for ir::Store {
         }
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+/// Response of the v3 ticket endpoint
+pub(crate) struct UnifiedReceiptDetailed {
+    pub id: String,
+    pub date: NaiveDateTime,
+    pub store: Store,
+    pub html_printed_receipt: String,
+}

@@ -8,4 +8,8 @@ pub enum Error {
     OAuthCsrfMismatch,
     #[error("OAuth token response does not include refresh token")]
     OAuthMissingRefreshToken,
+    #[error("Could not parse HTML receipt: {0}")]
+    HtmlReceiptParse(&'static str),
+    #[error("Could not parse HTML receipt: cannot find attribute {0} in element")]
+    HtmlReceiptParseMissingAttr(&'static str),
 }

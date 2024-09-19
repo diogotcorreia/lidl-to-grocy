@@ -8,7 +8,7 @@ pub trait StoreApi {
     fn get_specific_receipt(&self, receipt: &ReceiptSummary) -> Result<ReceiptDetailed>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Currency {
     /// ISO 4217 code of currency
     pub id: String,
@@ -17,7 +17,7 @@ pub struct Currency {
 }
 
 /// Used when listing available receipts; has minimal information
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ReceiptSummary {
     pub id: String,
     pub date: NaiveDateTime,
@@ -36,18 +36,18 @@ impl Display for ReceiptSummary {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Store {
     pub id: String,
     pub name: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Discount {
     pub amount: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ReceiptItem {
     /// Price per 1 of quantity
     pub unit_price: f64,
@@ -59,7 +59,7 @@ pub struct ReceiptItem {
     pub discounts: Vec<Discount>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ReceiptDetailed {
     pub id: String,
     pub items: Vec<ReceiptItem>,

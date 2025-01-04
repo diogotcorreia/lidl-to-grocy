@@ -15,9 +15,17 @@ pub(crate) fn parse_html_receipt(
 
     let mut currency = None;
     let mut items = vec![];
-
-    for element in dom.select(&selector) {
+    let mut iter = dom.select(&selector).peekable();
+    while let Some(element) = iter.next() {
         let el = element.value();
+        if let Some(next_element) = iter.peek() {
+            if next_element.value().id() == el.id() {
+                // Lidl Germany has multiple spans with the same ID wrapping different parts of
+                // the same receipt line (probably a bug on their side).
+                // Skip duplicate spans if ID the same.
+                continue;
+            }
+        }
         for class in el.classes() {
             match class {
                 "currency" => {
@@ -278,6 +286,99 @@ mod test {
             currency: Currency {
                 id: s!("SEK"),
                 symbol: s!("kr"),
+            },
+            store,
+        };
+
+        assert_eq!(expected, receipt);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_html_receipt_duplicate_spans() -> Result<()> {
+        macro_rules! s {
+            ($s: expr) => {
+                ($s.to_owned())
+            };
+        }
+
+        let id = s!("test-id");
+        let date = NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap();
+        let store = Store {
+            id: s!("STORE123"),
+            name: s!("Example Store"),
+        };
+        let html = include_str!("../test/receipt_duplicate_spans.html");
+        let receipt = parse_html_receipt(id.clone(), date, store.clone(), html)?;
+
+        let expected = ReceiptDetailed {
+            id,
+            items: vec![
+                ReceiptItem {
+                    unit_price: 2.99,
+                    quantity: 1.,
+                    is_weight: false,
+                    name: s!("Cherrystrauchtomaten"),
+                    barcode: s!("lidl-0082388"),
+                    discounts: vec![Discount { amount: 1.00 }],
+                },
+                ReceiptItem {
+                    unit_price: 1.59,
+                    quantity: 1.,
+                    is_weight: false,
+                    name: s!("Paprika rot"),
+                    barcode: s!("lidl-0082620"),
+                    discounts: vec![Discount { amount: 0.48 }],
+                },
+                ReceiptItem {
+                    unit_price: 1.79,
+                    quantity: 1.,
+                    is_weight: false,
+                    name: s!("K.champignons"),
+                    barcode: s!("lidl-0083017"),
+                    discounts: vec![],
+                },
+                ReceiptItem {
+                    unit_price: 1.79,
+                    quantity: 1.,
+                    is_weight: false,
+                    name: s!("Vegane Spätzle"),
+                    barcode: s!("lidl-7711334"),
+                    discounts: vec![],
+                },
+                ReceiptItem {
+                    unit_price: 0.89,
+                    quantity: 2.,
+                    is_weight: false,
+                    name: s!("Veg. Reibegenuss"),
+                    barcode: s!("lidl-6612316"),
+                    discounts: vec![],
+                },
+                ReceiptItem {
+                    unit_price: 2.19,
+                    quantity: 2.0,
+                    is_weight: false,
+                    name: s!("Bioland Tofu geräu."),
+                    barcode: s!("lidl-0175011"),
+                    discounts: vec![],
+                },
+                ReceiptItem {
+                    unit_price: 0.95,
+                    quantity: 1.0,
+                    is_weight: false,
+                    name: s!("Sojajoghurt Natur"),
+                    barcode: s!("lidl-0165195"),
+                    discounts: vec![],
+                },
+            ],
+            date,
+            currency: Currency {
+                id: s!("EUR"),
+                symbol: s!("€"),
             },
             store,
         };

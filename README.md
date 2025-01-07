@@ -21,6 +21,14 @@ information from the receipt, so that is prompted to the user.
 
 ## Features
 
+> [!WARNING]
+> Lidl has [recently changed their API](https://github.com/diogotcorreia/lidl-to-grocy/issues/10)
+> breaking some functionality.
+> Product barcodes can no longer be retrieved from the API, only the
+> internal Lidl product ID, and as such the barcodes fed into Grocy
+> are of syntax `lidl-<product id>` (e.g., `lidl-12345`).
+> For regions still supporting the old API, the program still behaves as expected.
+
 - Save credentials and store mappings between runs
 - Import both quantity and weight products
 - Insert due dates per product (even if multiple of the same product were purchased)
